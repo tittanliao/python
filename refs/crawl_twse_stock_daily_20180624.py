@@ -28,13 +28,10 @@ except Exception as e:
 
 months = []
 for x in range(i_year_start,i_year_end):
-        for y in range(1,13):
-                months.append(str(x).zfill(4) + str(y).zfill(2) + '01')
+        for y in range(1,2):
+                months.append(str(x).zfill(4) + str(y).zfill(2) + "01")
 
 months.sort(reverse=True)
-sql_start_date = months[-1]
-sql_end_date = '{0}31'.format(months[0][0:6])
-pyb.log.info('[prepare data from db] end..')
 
 '''#test code
 cols = [id]
@@ -45,12 +42,12 @@ df_db = pd.DataFrame(rows,columns=cols)
 months = ['20171201','20171101']
 '''
 
+pyb.log.info('[get request] start..')
 for i, r in df_db.iterrows():
 	try:
 		stockid = r[0]
 		dResult = {}
 		for x in months:
-			pyb.log.info('[get request] [stockid:{0}] [date:{1}] start..'.format(stockid,x))
 			sGet = sURL + '&date=' + x + '&stockNo=' + stockid
 			err_count = 0
 			while err_count < 3:
@@ -95,8 +92,8 @@ for i, r in df_db.iterrows():
 				#default
 				id = stockid
 				day = '19110101'
-				vol = int(str(row[1]).replace(',', ''))
-				turnover = int(str(row[2]).replace(',', ''))
+				vol = int(str(row[1]).replace(",", ""))
+				turnover = int(str(row[2]).replace(",", ""))
 				price_open = 0
 				price_high = 0
 				price_low = 0
@@ -112,11 +109,11 @@ for i, r in df_db.iterrows():
 				else:
 					amemo.append('NoRecord')
 				#0050 元大台灣50,106/02/08,漲跌價差,X0.00
-				if row[7].find('X') <= 0:
-					spread = float((str(row[7]).replace('X','')))
+				if row[7].find("X") >= 0:
+					spread = float((str(row[7]).replace("X", "")))
 				else:
 					amemo.append('NoCompare')
-				count = float(str(row[8]).replace(',',''))
+				count = float(str(row[8]).replace(",", ""))
 				memo = '|'.join(amemo)
 				a_date = row[0].split('/')
 				if len(a_date) == 3: 
@@ -135,18 +132,12 @@ for i, r in df_db.iterrows():
 		
 		df_final = pd.DataFrame(rows,columns=cols)
 		#df_final.to_csv(s_filename, sep=',', encoding='utf-8-sig', index=False)
-		
 		#db handler
 		pyb.log.info('[insert db] start..')
 		dbo = pyb.dbo
 		cursor = dbo.cursor()
-		#sql = "DELETE FROM daily WHERE id ='{0}' AND day >='{1}' AND day <='{2}'".format(stockid,sql_start_date,sql_end_date)
-		sql = 'DELETE FROM daily WHERE id = ? AND day BETWEEN ? AND ?'
-		cursor.execute(sql,stockid,sql_start_date,sql_end_date)
-		dbo.commit()
 		for i,row in df_final.iterrows():
 			try:
-				pyb.log.info('[insert db] [stockid:{0}] [date:{1}] start..'.format(row[0],row[1]))
 				sql='INSERT INTO daily(id,day,vol,turnover,price_open,price_high,price_low,price_close,spread,count,memo) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
 				cursor.execute(sql,row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10])
 				dbo.commit()
